@@ -72,6 +72,7 @@ export type BudgetRequest = {
   account_code: string
   account_name?: string  // เพิ่ม field นี้
   amount: number
+  purpose?: string       // เพิ่ม field นี้
   note?: string
   material_list: Array<{
     item: string

@@ -59,4 +59,3 @@ export interface StockFilter {
   stockLevel?: StockLevel;
   searchTerm?: string;
 }
-
