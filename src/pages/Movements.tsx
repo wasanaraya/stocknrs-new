@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -83,17 +82,17 @@ export default function Movements() {
     <Layout title="การเคลื่อนไหวสต็อก">
       <div className="w-full space-y-6 pb-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/30 shadow-card">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">การเคลื่อนไหวสต็อก</h1>
-            <p className="text-muted-foreground">ติดตามการรับเข้าและเบิกออกสต็อกทั้งหมด</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 font-kanit">การเคลื่อนไหวสต็อก</h1>
+            <p className="text-gray-600 mt-1">ติดตามการรับเข้าและเบิกออกสต็อกทั้งหมด</p>
           </div>
           <AddMovementDialog onMovementAdded={fetchMovements} />
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <Card className="bg-gradient-card shadow-card">
+          <Card className="bg-white/70 backdrop-blur-sm shadow-card hover:shadow-hover transition-all duration-300 border border-white/40 hover:border-primary/30">
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center space-x-2">
                 <div className="p-2 bg-green-500/10 rounded-lg">
@@ -109,7 +108,7 @@ export default function Movements() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card shadow-card">
+          <Card className="bg-white/70 backdrop-blur-sm shadow-card hover:shadow-hover transition-all duration-300 border border-white/40 hover:border-primary/30">
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center space-x-2">
                 <div className="p-2 bg-red-500/10 rounded-lg">
@@ -125,7 +124,7 @@ export default function Movements() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card shadow-card sm:col-span-2 lg:col-span-1">
+          <Card className="bg-white/70 backdrop-blur-sm shadow-card hover:shadow-hover transition-all duration-300 border border-white/40 hover:border-primary/30 sm:col-span-2 lg:col-span-1">
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center space-x-2">
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -141,35 +140,33 @@ export default function Movements() {
         </div>
 
         {/* Filters */}
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="ค้นหารายการเคลื่อนไหว..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="ประเภทรายการ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">ทุกประเภท</SelectItem>
-                  <SelectItem value="in">รับเข้า</SelectItem>
-                  <SelectItem value="out">เบิกออก</SelectItem>
-                </SelectContent>
-              </Select>
+        <div className="bg-white/50 backdrop-blur-sm rounded-2xl shadow-card border border-white/30 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="ค้นหารายการเคลื่อนไหว..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white/80 backdrop-blur-sm border-white/50"
+              />
             </div>
-          </CardContent>
-        </Card>
+            
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="ประเภทรายการ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกประเภท</SelectItem>
+                <SelectItem value="in">รับเข้า</SelectItem>
+                <SelectItem value="out">เบิกออก</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         {/* Movements Table */}
-        <Card className="bg-gradient-card shadow-card">
+        <Card className="bg-white/70 backdrop-blur-sm shadow-card hover:shadow-hover transition-all duration-300 border border-white/40 hover:border-primary/30">
           <CardHeader>
             <CardTitle className="text-lg sm:text-xl">รายการเคลื่อนไหวล่าสุด</CardTitle>
           </CardHeader>
@@ -268,3 +265,4 @@ export default function Movements() {
     </Layout>
   );
 }
+

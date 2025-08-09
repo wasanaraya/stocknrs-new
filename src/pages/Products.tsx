@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase, Product, Category, Supplier } from '@/lib/supabase';
 import { AddProductDialog } from '@/components/Dialogs/AddProductDialog';
 import { EditProductDialog } from '@/components/Dialogs/EditProductDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface ProductWithDetails extends Product {
   category_name: string;
@@ -117,8 +118,6 @@ export default function Products() {
   };
 
   const handleDeleteProduct = async (productId: string, productName: string) => {
-    if (!confirm(`ต้องการลบสินค้า "${productName}" หรือไม่?`)) return;
-
     try {
       const { error } = await supabase
         .from('products')
@@ -298,14 +297,30 @@ export default function Products() {
                             >
                               <Edit className="h-3 w-3" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteProduct(product.id, product.name)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="bg-gradient-card shadow-glow border-white/10">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    คุณแน่ใจหรือไม่ที่จะลบสินค้า "{product.name}"?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteProduct(product.id, product.name)}
+                                    className="bg-destructive hover:bg-destructive/90"
+                                  >
+                                    ลบ
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
                       </div>
@@ -379,30 +394,32 @@ export default function Products() {
               })}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <Package className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">ไม่พบสินค้า</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {filter.searchTerm || filter.category || filter.supplier || filter.stockLevel
-                  ? 'ลองปรับตัวกรองเพื่อดูผลลัพธ์เพิ่มเติม'
-                  : 'เริ่มต้นโดยการเพิ่มสินค้าชิ้นแรกเข้าสู่ระบบสต็อก'
-                }
-              </p>
-              <AddProductDialog onProductAdded={fetchData} />
-            </div>
+            <Card className="bg-gradient-card shadow-card">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <p className="text-muted-foreground">ไม่พบสินค้าที่ตรงกับการค้นหา</p>
+              </CardContent>
+            </Card>
           )}
         </div>
-        </>
+
+        {/* Edit Product Dialog */}
+        <EditProductDialog
+          product={editingProduct}
+          categories={categories}
+          suppliers={suppliers}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onProductUpdated={fetchData}
+        />
+        <AddProductDialog
+          categories={categories}
+          suppliers={suppliers}
+          onProductAdded={fetchData}
+        />
+          </>
         )}
       </div>
-
-      {/* Edit Product Dialog */}
-      <EditProductDialog
-        product={editingProduct}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onProductUpdated={fetchData}
-      />
     </Layout>
   );
 }
+

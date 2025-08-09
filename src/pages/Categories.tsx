@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Search, Edit, Trash2, Pill } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Pill, Loader2 } from 'lucide-react';
 import { supabase, type Category } from '@/lib/supabase';
 import { AddCategoryDialog } from '@/components/Dialogs/AddCategoryDialog';
 import { EditCategoryDialog } from '@/components/Dialogs/EditCategoryDialog';
@@ -108,44 +107,33 @@ export default function Categories() {
     <Layout title="หมวดหมู่สินค้า">
       <div className="w-full space-y-6 pb-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/30 shadow-card">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">หมวดหมู่สินค้า</h1>
-            <p className="text-muted-foreground">จัดการหมวดหมู่สินค้าของคุณ</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 font-kanit">หมวดหมู่สินค้า</h1>
+            <p className="text-gray-600 mt-1">จัดการหมวดหมู่สินค้าของคุณ</p>
           </div>
           <AddCategoryDialog onCategoryAdded={fetchCategories} />
         </div>
 
         {/* Search */}
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-4 sm:p-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="ค้นหาหมวดหมู่..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white/50 backdrop-blur-sm rounded-2xl shadow-card border border-white/30 p-4 sm:p-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="ค้นหาหมวดหมู่..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-white/80 backdrop-blur-sm border-white/50"
+            />
+          </div>
+        </div>
 
         {/* Categories Grid */}
         <div className="w-full min-h-0">
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="bg-gradient-card shadow-card">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="animate-pulse space-y-4">
-                      <div className="h-4 bg-muted rounded"></div>
-                      <div className="h-3 bg-muted rounded w-3/4"></div>
-                      <div className="h-3 bg-muted rounded w-1/2"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">กำลังโหลดข้อมูล...</span>
             </div>
           ) : filteredCategories.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
@@ -153,7 +141,7 @@ export default function Categories() {
                 const productCount = productCounts[category.id] || 0;
               
                 return (
-                  <Card key={category.id} className="bg-gradient-card shadow-card hover:shadow-hover transition-all duration-200 h-fit">
+                  <Card key={category.id} className="bg-white/70 backdrop-blur-sm shadow-card hover:shadow-hover transition-all duration-200 h-fit border border-white/40 hover:border-primary/30">
                      <CardHeader className="pb-3">
                        <div className="flex items-start justify-between gap-2">
                          <div className="flex-1 min-w-0">
@@ -239,15 +227,16 @@ export default function Categories() {
             </Card>
           )}
         </div>
-      </div>
 
-      {/* Edit Category Dialog */}
-      <EditCategoryDialog
-        category={editingCategory}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onCategoryUpdated={fetchCategories}
-      />
+        {/* Edit Category Dialog */}
+        <EditCategoryDialog
+          category={editingCategory}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onCategoryUpdated={fetchCategories}
+        />
+      </div>
     </Layout>
   );
 }
+

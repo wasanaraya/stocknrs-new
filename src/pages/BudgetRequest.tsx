@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Eye, Edit, Trash2, MoreHorizontal, Printer, Calendar, User, CreditCard, FileText } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, MoreHorizontal, Printer, Calendar, User, CreditCard, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, type BudgetRequest as DBBudgetRequest, type Approval } from '@/lib/supabase';
+import { AddBudgetRequestDialog } from '@/components/Dialogs/AddBudgetRequestDialog';
 
 // Type for partial approval data we actually use
 type ApprovalInfo = {
@@ -16,7 +17,6 @@ type ApprovalInfo = {
   created_at: string;
   remark?: string;
 };
-import { AddBudgetRequestDialog } from '@/components/Dialogs/AddBudgetRequestDialog';
 
 export default function BudgetRequest() {
   const { toast } = useToast();
@@ -25,7 +25,7 @@ export default function BudgetRequest() {
   const [selectedRequest, setSelectedRequest] = useState<DBBudgetRequest | null>(null);
   const [approvalData, setApprovalData] = useState<ApprovalInfo | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [addRequestDialogOpen, setAddRequestDialogOpen] = useState(false); // Renamed for clarity
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<DBBudgetRequest | null>(null);
 
@@ -183,29 +183,16 @@ export default function BudgetRequest() {
     return request.status === 'PENDING';
   };
 
-  if (loading) {
-    return (
-      <Layout title="คำขออนุมัติใช้งบประมาณ">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>กำลังโหลดข้อมูล...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout title="คำขออนุมัติใช้งบประมาณ">
-      <div className="space-y-6">
+      <div className="w-full space-y-6 pb-8">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/30 shadow-card">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">คำขออนุมัติใช้งบประมาณ</h1>
-            <p className="text-muted-foreground">จัดการคำขออนุมัติใช้งบประมาณทั้งหมด</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 font-kanit">คำขออนุมัติใช้งบประมาณ</h1>
+            <p className="text-gray-600 mt-1">จัดการคำขออนุมัติใช้งบประมาณทั้งหมด</p>
           </div>
-          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <Dialog open={addRequestDialogOpen} onOpenChange={setAddRequestDialogOpen}>
             <DialogTrigger asChild>
               <Button size="lg" className="gap-2">
                 <Plus className="h-5 w-5" />
@@ -218,7 +205,7 @@ export default function BudgetRequest() {
               </DialogHeader>
               <AddBudgetRequestDialog 
                 onSuccess={() => {
-                  setEditDialogOpen(false);
+                  setAddRequestDialogOpen(false);
                   fetchRequests();
                 }}
               />
@@ -227,16 +214,21 @@ export default function BudgetRequest() {
         </div>
 
         {/* Requests List */}
-        <div className="grid gap-4">
-          {requests.length === 0 ? (
-            <Card>
-              <CardContent className="text-center p-8">
+        <div className="w-full min-h-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">กำลังโหลดข้อมูล...</span>
+            </div>
+          ) : requests.length === 0 ? (
+            <Card className="bg-white/70 backdrop-blur-sm shadow-card border border-white/40">
+              <CardContent className="text-center p-8 sm:p-12">
                 <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">ยังไม่มีคำขออนุมัติ</h3>
                 <p className="text-muted-foreground mb-4">
                   เริ่มต้นโดยการสร้างคำขออนุมัติใช้งบประมาณใหม่
                 </p>
-                <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <Dialog open={addRequestDialogOpen} onOpenChange={setAddRequestDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
                       <Plus className="h-4 w-4 mr-2" />
@@ -249,7 +241,7 @@ export default function BudgetRequest() {
                     </DialogHeader>
                     <AddBudgetRequestDialog 
                       onSuccess={() => {
-                        setEditDialogOpen(false);
+                        setAddRequestDialogOpen(false);
                         fetchRequests();
                       }}
                     />
@@ -258,102 +250,104 @@ export default function BudgetRequest() {
               </CardContent>
             </Card>
           ) : (
-            requests.map((request) => (
-              <Card key={request.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-3">
-                        <h3 className="text-lg font-semibold">{request.request_no}</h3>
-                        {getStatusBadge(request.status)}
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">ผู้ขอ:</span>
-                          <span className="font-medium">{request.requester}</span>
+            <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+              {requests.map((request) => (
+                <Card key={request.id} className="bg-white/70 backdrop-blur-sm shadow-card hover:shadow-hover transition-all duration-300 border border-white/40 hover:border-primary/30 h-fit">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-3">
+                          <h3 className="text-lg font-semibold">{request.request_no}</h3>
+                          {getStatusBadge(request.status)}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">วันที่:</span>
-                          <span>{new Date(request.request_date).toLocaleDateString('th-TH')}</span>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">ผู้ขอ:</span>
+                            <span className="font-medium">{request.requester}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">วันที่:</span>
+                            <span>{new Date(request.request_date).toLocaleDateString('th-TH')}</span>
+                          </div>
+                          <div className="flex items-center gap-2 col-span-full">
+                            <CreditCard className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">จำนวน:</span>
+                            <span className="font-semibold text-primary">
+                              {request.amount.toLocaleString('th-TH')} บาท
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">จำนวน:</span>
-                          <span className="font-semibold text-primary">
-                            {request.amount.toLocaleString('th-TH')} บาท
-                          </span>
+
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          <span>บัญชี: {request.account_code} - {request.account_name}</span>
                         </div>
                       </div>
 
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        <span>บัญชี: {request.account_code} - {request.account_name}</span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedRequest(request);
+                            setDetailDialogOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handlePrint(request)}
+                            >
+                              <Printer className="h-4 w-4 mr-2" />
+                              พิมพ์
+                            </DropdownMenuItem>
+                            {canEdit(request) && (
+                              <>
+                                {/* <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedRequest(request);
+                                    setEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  แก้ไข
+                                </DropdownMenuItem> */}
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    setRequestToDelete(request);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  ลบ
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-
-                     <div className="flex items-center gap-2">
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => {
-                           setSelectedRequest(request);
-                           setDetailDialogOpen(true);
-                         }}
-                       >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handlePrint(request)}
-                          >
-                            <Printer className="h-4 w-4 mr-2" />
-                            พิมพ์
-                          </DropdownMenuItem>
-                          {canEdit(request) && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedRequest(request);
-                                  setEditDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                แก้ไข
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => {
-                                  setRequestToDelete(request);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                ลบ
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              ))
+            </div>
           )}
         </div>
 
         {/* Detail Dialog */}
         <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-card shadow-glow border-white/10">
             <DialogHeader>
               <div className="flex items-center justify-between">
                 <DialogTitle>รายละเอียดคำขออนุมัติ</DialogTitle>
@@ -390,76 +384,65 @@ export default function BudgetRequest() {
                      <p>{new Date(selectedRequest.request_date).toLocaleDateString('th-TH')}</p>
                    </div>
                    <div className="space-y-2">
-                     <span className="text-sm font-medium text-muted-foreground">รหัสบัญชี</span>
+                     <span className="text-sm font-medium text-muted-foreground">จำนวนเงิน</span>
+                     <p className="text-lg font-semibold text-primary">{selectedRequest.amount.toLocaleString('th-TH')} บาท</p>
+                   </div>
+                   <div className="space-y-2">
+                     <span className="text-sm font-medium text-muted-foreground">บัญชี</span>
                      <p>{selectedRequest.account_code} - {selectedRequest.account_name}</p>
                    </div>
-                   <div className="space-y-2">
-                     <span className="text-sm font-medium text-muted-foreground">จำนวนเงิน</span>
-                     <p className="text-2xl font-bold text-primary">
-                       {selectedRequest.amount.toLocaleString('th-TH')} บาท
-                     </p>
-                   </div>
-                   {approvalData && (
-                     <>
-                       <div className="space-y-2">
-                         <span className="text-sm font-medium text-muted-foreground">ผู้อนุมัติ</span>
-                         <p className="font-medium">{approvalData.approver_name}</p>
-                       </div>
-                       <div className="space-y-2">
-                         <span className="text-sm font-medium text-muted-foreground">วันที่อนุมัติ</span>
-                         <p>{new Date(approvalData.created_at).toLocaleDateString('th-TH', { 
-                           year: 'numeric', 
-                           month: 'long', 
-                           day: 'numeric',
-                           hour: '2-digit',
-                           minute: '2-digit'
-                         })}</p>
-                       </div>
-                     </>
-                   )}
                  </div>
 
-                 {approvalData?.remark && (
-                   <div className="space-y-2">
-                     <span className="text-sm font-medium text-muted-foreground">หมายเหตุจากผู้อนุมัติ</span>
-                     <p className="bg-muted p-3 rounded-lg border-l-4 border-primary">{approvalData.remark}</p>
-                   </div>
-                 )}
-
-                {selectedRequest.note && (
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium text-muted-foreground">หมายเหตุ</span>
-                    <p className="bg-muted p-3 rounded-lg">{selectedRequest.note}</p>
-                  </div>
-                )}
-
                 <div className="space-y-2">
-                  <span className="text-sm font-medium text-muted-foreground">รายการวัสดุ</span>
-                  {selectedRequest.material_list && selectedRequest.material_list.length > 0 ? (
-                    <div className="border rounded-lg overflow-hidden">
-                      <table className="w-full">
-                        <thead className="bg-muted">
-                          <tr>
-                            <th className="text-left p-3 font-medium">รายการ</th>
-                            <th className="text-left p-3 font-medium">จำนวน</th>
+                  <span className="text-sm font-medium text-muted-foreground">วัตถุประสงค์</span>
+                  <p>{selectedRequest.purpose}</p>
+                </div>
+
+                {selectedRequest.material_list && selectedRequest.material_list.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium text-muted-foreground">รายการวัสดุ</span>
+                    <div className="border rounded-md">
+                      <table className="w-full text-left table-auto">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <th className="p-2 text-sm font-semibold text-muted-foreground">รายการ</th>
+                            <th className="p-2 text-sm font-semibold text-muted-foreground">จำนวน</th>
                           </tr>
                         </thead>
                         <tbody>
                           {selectedRequest.material_list.map((item, index) => (
-                            <tr key={index} className="border-t">
-                              <td className="p-3">{item.item || 'ไม่ระบุ'}</td>
-                              <td className="p-3">{item.quantity || 'ไม่ระบุ'}</td>
+                            <tr key={index} className="border-t last:border-b-0">
+                              <td className="p-2 text-sm">{item.item}</td>
+                              <td className="p-2 text-sm">{item.quantity}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground bg-muted p-3 rounded-lg text-center">
-                      ไม่มีรายการวัสดุที่ระบุ
-                    </p>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {approvalData && (
+                  <div className="space-y-4 p-4 border rounded-md bg-secondary/20">
+                    <h3 className="text-lg font-semibold">ข้อมูลการอนุมัติ</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <span className="text-sm font-medium text-muted-foreground">ผู้อนุมัติ</span>
+                        <p>{approvalData.approver_name}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <span className="text-sm font-medium text-muted-foreground">วันที่อนุมัติ</span>
+                        <p>{new Date(approvalData.created_at).toLocaleString('th-TH')}</p>
+                      </div>
+                      {approvalData.remark && (
+                        <div className="space-y-2 col-span-full">
+                          <span className="text-sm font-medium text-muted-foreground">หมายเหตุ</span>
+                          <p>{approvalData.remark}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
@@ -467,17 +450,16 @@ export default function BudgetRequest() {
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="bg-gradient-card shadow-glow border-white/10">
             <AlertDialogHeader>
-              <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+              <AlertDialogTitle>ยืนยันการลบคำขอ</AlertDialogTitle>
               <AlertDialogDescription>
-                คุณต้องการลบคำขอเลขที่ {requestToDelete?.request_no} หรือไม่?
-                การดำเนินการนี้ไม่สามารถย้อนกลับได้
+                คุณแน่ใจหรือไม่ที่จะลบคำขออนุมัติ "{requestToDelete?.request_no}"? การกระทำนี้ไม่สามารถยกเลิกได้
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={handleDelete}
                 className="bg-destructive hover:bg-destructive/90"
               >
@@ -490,3 +472,4 @@ export default function BudgetRequest() {
     </Layout>
   );
 }
+

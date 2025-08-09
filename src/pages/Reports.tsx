@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,34 +7,81 @@ import { Button } from '@/components/ui/button';
 import { BarChart3, TrendingUp, Download, Calendar } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useStock } from '@/contexts/StockContext';
+import { Product, StockMovement, Category } from '@/types/stock';
 
 export default function Reports() {
-  const { products, categories } = useStock();
+  const { products, categories, movements } = useStock();
   const [reportType, setReportType] = useState('inventory');
   const [timeRange, setTimeRange] = useState('7days');
 
-  // Generate sample data for charts
+  const getFilteredMovements = (range: string): StockMovement[] => {
+    const now = new Date();
+    let startDate = new Date();
+
+    switch (range) {
+      case '7days':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case '30days':
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case '90days':
+        startDate.setDate(now.getDate() - 90);
+        break;
+      case '1year':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        startDate.setDate(now.getDate() - 7);
+    }
+
+    return movements.filter(m => new Date(m.created_at) >= startDate);
+  };
+
   const inventoryData = categories.map(category => ({
     name: category.name,
-    value: products.filter(p => p.category === category.name).reduce((sum, p) => sum + p.currentStock, 0)
+    value: products.filter(p => p.category_id === category.id).reduce((sum, p) => sum + p.current_stock, 0)
   }));
 
-  const salesData = [
-    { name: 'Mon', sales: 120, purchases: 80 },
-    { name: 'Tue', sales: 190, purchases: 95 },
-    { name: 'Wed', sales: 150, purchases: 70 },
-    { name: 'Thu', sales: 220, purchases: 110 },
-    { name: 'Fri', sales: 280, purchases: 140 },
-    { name: 'Sat', sales: 320, purchases: 160 },
-    { name: 'Sun', sales: 250, purchases: 125 }
-  ];
+  const salesData = (() => {
+    const filteredMovements = getFilteredMovements(timeRange);
+    const salesMap = new Map<string, { sales: number; purchases: number }>();
 
-  const stockMovementData = [
-    { name: 'Week 1', stockIn: 400, stockOut: 240 },
-    { name: 'Week 2', stockIn: 300, stockOut: 139 },
-    { name: 'Week 3', stockIn: 200, stockOut: 980 },
-    { name: 'Week 4', stockIn: 278, stockOut: 390 }
-  ];
+    filteredMovements.forEach(movement => {
+      const date = new Date(movement.created_at).toLocaleDateString(); // Group by day
+      if (!salesMap.has(date)) {
+        salesMap.set(date, { sales: 0, purchases: 0 });
+      }
+      const data = salesMap.get(date)!;
+      if (movement.type === 'out') {
+        data.sales += movement.quantity * (products.find(p => p.id === movement.product_id)?.unit_price || 0);
+      } else if (movement.type === 'in') {
+        data.purchases += movement.quantity * (products.find(p => p.id === movement.product_id)?.unit_price || 0);
+      }
+    });
+
+    return Array.from(salesMap.entries()).map(([date, values]) => ({ name: date, ...values })).sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+  })();
+
+  const stockMovementData = (() => {
+    const filteredMovements = getFilteredMovements(timeRange);
+    const movementMap = new Map<string, { stockIn: number; stockOut: number }>();
+
+    filteredMovements.forEach(movement => {
+      const date = new Date(movement.created_at).toLocaleDateString(); // Group by day
+      if (!movementMap.has(date)) {
+        movementMap.set(date, { stockIn: 0, stockOut: 0 });
+      }
+      const data = movementMap.get(date)!;
+      if (movement.type === 'in') {
+        data.stockIn += movement.quantity;
+      } else if (movement.type === 'out') {
+        data.stockOut += movement.quantity;
+      }
+    });
+
+    return Array.from(movementMap.entries()).map(([date, values]) => ({ name: date, ...values })).sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+  })();
 
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'];
 
@@ -109,7 +156,7 @@ export default function Reports() {
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">มูลค่าสต็อกรวม</p>
                   <p className="text-lg sm:text-2xl font-bold text-foreground">
-                    ฿{products.reduce((sum, p) => sum + (p.unitPrice * p.currentStock), 0).toLocaleString()}
+                    ฿{products.reduce((sum, p) => sum + (p.unit_price * p.current_stock), 0).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -125,7 +172,7 @@ export default function Reports() {
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">สินค้าสต็อกต่ำ</p>
                   <p className="text-xl sm:text-2xl font-bold text-foreground">
-                    {products.filter(p => p.currentStock <= p.minStock).length.toLocaleString()}
+                    {products.filter(p => p.current_stock <= p.min_stock).length.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -249,3 +296,5 @@ export default function Reports() {
     </Layout>
   );
 }
+
+

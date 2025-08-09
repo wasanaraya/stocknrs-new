@@ -170,8 +170,8 @@ export default function ApprovalPage() {
     return (
       <Layout title="ไม่พบข้อมูล">
         <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardContent className="text-center p-8">
+          <Card className="bg-white/70 backdrop-blur-sm shadow-card border border-white/40">
+            <CardContent className="text-center p-8 sm:p-12">
               <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
               <h2 className="text-xl font-semibold mb-2">ไม่พบคำขออนุมัติ</h2>
               <p className="text-muted-foreground mb-4">
@@ -191,8 +191,8 @@ export default function ApprovalPage() {
     return (
       <Layout title="คำขอได้รับการตัดสินแล้ว">
         <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardContent className="text-center p-8">
+          <Card className="bg-white/70 backdrop-blur-sm shadow-card border border-white/40">
+            <CardContent className="text-center p-8 sm:p-12">
               <Badge 
                 variant={request.status === 'APPROVED' ? 'default' : 'destructive'}
                 className="text-lg p-2 mb-4"
@@ -215,33 +215,34 @@ export default function ApprovalPage() {
 
   return (
     <Layout title="อนุมัติคำขอใช้งบประมาณ">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6 pb-8">
         {/* Header */}
-        <Card className="bg-gradient-card shadow-card">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <FileText className="h-6 w-6" />
-              คำขออนุมัติใช้งบประมาณ
-            </CardTitle>
-            <Badge variant="outline" className="w-fit">
-              รอการอนุมัติ
-            </Badge>
-          </CardHeader>
-        </Card>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/30 shadow-card">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 font-kanit">อนุมัติคำขอใช้งบประมาณ</h1>
+            <p className="text-gray-600 mt-1">ตรวจสอบและอนุมัติคำขอใช้งบประมาณ</p>
+          </div>
+          <Badge variant="outline" className="w-fit text-base px-3 py-1.5 bg-yellow-50 text-yellow-700 border-yellow-200">
+            รอการอนุมัติ
+          </Badge>
+        </div>
 
         {/* Request Details with Carousel */}
-        <Card>
+        <Card className="bg-white/70 backdrop-blur-sm shadow-card border border-white/40">
           <CardHeader>
-            <CardTitle>รายละเอียดคำขอ</CardTitle>
+            <CardTitle className="text-xl font-semibold flex items-center gap-2">
+              <FileText className="h-6 w-6 text-primary" />
+              รายละเอียดคำขอ
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Carousel className="w-full max-w-full">
               <CarouselContent>
                 {/* Slide 1: Basic Information & Budget */}
                 <CarouselItem>
-                  <div className="space-y-6">
+                  <div className="space-y-6 p-2">
                     <div className="text-center mb-4">
-                      <Badge variant="outline" className="text-sm">ข้อมูลคำขอ (1/2)</Badge>
+                      <Badge variant="secondary" className="text-sm bg-blue-100 text-blue-700">ข้อมูลคำขอ (1/2)</Badge>
                     </div>
                     
                     {/* Basic Info */}
@@ -277,7 +278,7 @@ export default function ApprovalPage() {
                       </div>
                     </div>
 
-                    <Separator />
+                    <Separator className="my-6" />
 
                     {/* Budget Information */}
                     <div className="text-center space-y-4">
@@ -291,7 +292,7 @@ export default function ApprovalPage() {
                       </div>
                       
                       {request.note && (
-                        <div className="space-y-2">
+                        <div className="space-y-2 text-left">
                           <Label className="text-sm font-medium text-muted-foreground">หมายเหตุจากผู้ขอ</Label>
                           <div className="bg-muted p-4 rounded-lg border-l-4 border-blue-500">
                             <p className="text-sm leading-relaxed">{request.note}</p>
@@ -304,9 +305,9 @@ export default function ApprovalPage() {
 
                 {/* Slide 2: Material List */}
                 <CarouselItem>
-                  <div className="space-y-4">
+                  <div className="space-y-4 p-2">
                     <div className="text-center mb-4">
-                      <Badge variant="outline" className="text-sm">รายการวัสดุ (2/2)</Badge>
+                      <Badge variant="secondary" className="text-sm bg-blue-100 text-blue-700">รายการวัสดุ (2/2)</Badge>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-lg font-semibold flex items-center gap-2">
@@ -353,9 +354,9 @@ export default function ApprovalPage() {
         </Card>
 
         {/* Decision Section */}
-        <Card>
+        <Card className="bg-white/70 backdrop-blur-sm shadow-card border border-white/40">
           <CardHeader>
-            <CardTitle>การตัดสินใจ</CardTitle>
+            <CardTitle className="text-xl font-semibold">การตัดสินใจ</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -366,6 +367,18 @@ export default function ApprovalPage() {
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="ระบุหมายเหตุหรือเงื่อนไขการอนุมัติ (ถ้ามี)"
                 rows={3}
+                className="bg-white/80 backdrop-blur-sm border-white/50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="approverName">ชื่อผู้อนุมัติ <span className="text-red-500">*</span></Label>
+              <Input
+                id="approverName"
+                value={approverName}
+                onChange={(e) => setApproverName(e.target.value)}
+                placeholder="กรุณากรอกชื่อผู้อนุมัติ"
+                className="bg-white/80 backdrop-blur-sm border-white/50"
               />
             </div>
 
@@ -374,7 +387,7 @@ export default function ApprovalPage() {
                 <AlertDialogTrigger asChild>
                   <Button 
                     size="lg" 
-                    className="flex-1"
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                     onClick={() => handleDecisionClick('APPROVED')}
                   >
                     <CheckCircle className="h-5 w-5 mr-2" />
@@ -386,7 +399,7 @@ export default function ApprovalPage() {
                   <Button 
                     size="lg" 
                     variant="destructive" 
-                    className="flex-1"
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                     onClick={() => handleDecisionClick('REJECTED')}
                   >
                     <XCircle className="h-5 w-5 mr-2" />
@@ -394,69 +407,36 @@ export default function ApprovalPage() {
                   </Button>
                 </AlertDialogTrigger>
 
-                <AlertDialogContent className="max-w-md">
+                <AlertDialogContent className="bg-gradient-card shadow-glow border-white/10">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      ยืนยันการ{pendingDecision === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ'}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription asChild>
-                      <div className="space-y-4">
-                        <p>คุณกำลังจะ{pendingDecision === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ'}คำขอใช้งบประมาณของ <strong>คุณ {request.requester}</strong></p>
-                        <p><strong>จำนวนเงิน:</strong> {request.amount.toLocaleString('th-TH')} บาท</p>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="approverNameInput">ชื่อผู้อนุมัติ *</Label>
-                          <Input
-                            id="approverNameInput"
-                            value={approverName}
-                            onChange={(e) => setApproverName(e.target.value)}
-                            placeholder="กรุณาระบุชื่อผู้อนุมัติ"
-                            required
-                          />
-                        </div>
-
-                        {note.trim() && (
-                          <div className="p-3 bg-muted rounded">
-                            <strong>หมายเหตุ:</strong> {note.trim()}
-                          </div>
-                        )}
-
-                        <div className="space-y-2">
-                          <Label htmlFor="decisionConfirmInput">
-                            เพื่อยืนยัน โปรดพิมพ์คำว่า "<strong>{pendingDecision === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ'}</strong>" ในช่องด้านล่าง
-                          </Label>
-                          <Input
-                            id="decisionConfirmInput"
-                            value={confirmText}
-                            onChange={(e) => setConfirmText(e.target.value)}
-                            placeholder={`พิมพ์ "${pendingDecision === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ'}" เพื่อยืนยัน`}
-                            autoComplete="off"
-                          />
-                        </div>
-                        
-                        <div className="text-sm text-muted-foreground">
-                          การตัดสินใจนี้จะไม่สามารถเปลี่ยนแปลงได้หลังจากยืนยัน
-                        </div>
-                      </div>
+                    <AlertDialogTitle>ยืนยันการ{pendingDecision === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ'}คำขอ</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      คุณแน่ใจหรือไม่ที่จะ{pendingDecision === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ'}คำขอเลขที่ <span className="font-semibold">{request?.request_no}</span>?
+                      <br />
+                      โปรดยืนยันโดยพิมพ์คำว่า "<span className="font-semibold text-primary">{pendingDecision === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ'}</span>" ลงในช่องด้านล่าง
                     </AlertDialogDescription>
                   </AlertDialogHeader>
+                  <Input
+                    placeholder={`พิมพ์ \"${pendingDecision === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ'}\" เพื่อยืนยัน`}
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    className="mt-2"
+                  />
                   <AlertDialogFooter>
-                    <AlertDialogCancel disabled={submitting}>
-                      ยกเลิก
-                    </AlertDialogCancel>
-                    <AlertDialogAction 
+                    <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                    <AlertDialogAction
                       onClick={confirmDecision}
-                      disabled={submitting || !isFormValid()}
-                      className={pendingDecision === 'REJECTED' ? 'bg-destructive hover:bg-destructive/90' : ''}
+                      disabled={!isFormValid() || submitting}
+                      className={pendingDecision === 'APPROVED' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
                     >
                       {submitting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          กำลังบันทึก...
-                        </>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : pendingDecision === 'APPROVED' ? (
+                        <CheckCircle className="h-4 w-4 mr-2" />
                       ) : (
-                        `ยืนยันการ${pendingDecision === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ'}`
+                        <XCircle className="h-4 w-4 mr-2" />
                       )}
+                      {submitting ? 'กำลังบันทึก...' : 'ยืนยัน'}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -468,3 +448,4 @@ export default function ApprovalPage() {
     </Layout>
   );
 }
+

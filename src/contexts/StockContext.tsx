@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { Product, StockMovement, Category, Supplier, StockStats, StockFilter } from '@/types/stock';
+import { supabase } from '@/lib/supabase';
 
 interface StockState {
   products: Product[];
@@ -12,6 +13,10 @@ interface StockState {
 }
 
 type StockAction =
+  | { type: 'SET_PRODUCTS'; payload: Product[] }
+  | { type: 'SET_CATEGORIES'; payload: Category[] }
+  | { type: 'SET_SUPPLIERS'; payload: Supplier[] }
+  | { type: 'SET_MOVEMENTS'; payload: StockMovement[] }
   | { type: 'ADD_PRODUCT'; payload: Product }
   | { type: 'UPDATE_PRODUCT'; payload: Product }
   | { type: 'DELETE_PRODUCT'; payload: string }
@@ -25,17 +30,8 @@ type StockAction =
 const initialState: StockState = {
   products: [],
   movements: [],
-  categories: [
-    { id: '1', name: 'Electronics', description: 'Electronic devices and accessories', color: '#3B82F6' },
-    { id: '2', name: 'Clothing', description: 'Apparel and fashion items', color: '#10B981' },
-    { id: '3', name: 'Books', description: 'Books and publications', color: '#F59E0B' },
-    { id: '4', name: 'Home & Garden', description: 'Home improvement and garden supplies', color: '#8B5CF6' },
-  ],
-  suppliers: [
-    { id: '1', name: 'TechSupply Co.', contact: 'John Smith', email: 'john@techsupply.com', phone: '+1-555-0123' },
-    { id: '2', name: 'Fashion Forward', contact: 'Sarah Johnson', email: 'sarah@fashionforward.com', phone: '+1-555-0124' },
-    { id: '3', name: 'BookWorld', contact: 'Mike Wilson', email: 'mike@bookworld.com', phone: '+1-555-0125' },
-  ],
+  categories: [],
+  suppliers: [],
   stats: {
     totalProducts: 0,
     totalValue: 0,
@@ -47,81 +43,13 @@ const initialState: StockState = {
   loading: false,
 };
 
-// Sample data
-const sampleProducts: Product[] = [
-  {
-    id: '1',
-    name: 'MacBook Pro 16"',
-    sku: 'MBP-16-001',
-    description: 'Apple MacBook Pro 16-inch with M3 chip',
-    category: '1',
-    supplier: '1',
-    currentStock: 15,
-    minStock: 5,
-    maxStock: 50,
-    unitPrice: 2499.99,
-    barcode: '123456789012',
-    location: 'A1-B2',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    name: 'Wireless Headphones',
-    sku: 'WH-001',
-    description: 'Premium noise-canceling wireless headphones',
-    category: '1',
-    supplier: '1',
-    currentStock: 3,
-    minStock: 10,
-    maxStock: 100,
-    unitPrice: 299.99,
-    barcode: '123456789013',
-    location: 'A2-C1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    name: 'Designer T-Shirt',
-    sku: 'TS-001',
-    description: 'Premium cotton designer t-shirt',
-    category: '2',
-    supplier: '2',
-    currentStock: 0,
-    minStock: 20,
-    maxStock: 200,
-    unitPrice: 49.99,
-    barcode: '123456789014',
-    location: 'B1-A3',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    name: 'JavaScript Guide',
-    sku: 'JS-GUIDE-001',
-    description: 'Complete guide to modern JavaScript development',
-    category: '3',
-    supplier: '3',
-    currentStock: 45,
-    minStock: 10,
-    maxStock: 100,
-    unitPrice: 39.99,
-    barcode: '123456789015',
-    location: 'C1-A1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
 function calculateStats(products: Product[], movements: StockMovement[]): StockStats {
   const totalProducts = products.length;
   const totalValue = products.reduce((sum, product) => sum + (product.currentStock * product.unitPrice), 0);
   const lowStockItems = products.filter(p => p.currentStock <= p.minStock && p.currentStock > 0).length;
   const outOfStockItems = products.filter(p => p.currentStock === 0).length;
   const recentMovements = movements.filter(m => {
-    const movementDate = new Date(m.createdAt);
+    const movementDate = new Date(m.created_at);
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     return movementDate >= oneWeekAgo;
@@ -138,6 +66,14 @@ function calculateStats(products: Product[], movements: StockMovement[]): StockS
 
 function stockReducer(state: StockState, action: StockAction): StockState {
   switch (action.type) {
+    case 'SET_PRODUCTS':
+      return { ...state, products: action.payload };
+    case 'SET_CATEGORIES':
+      return { ...state, categories: action.payload };
+    case 'SET_SUPPLIERS':
+      return { ...state, suppliers: action.payload };
+    case 'SET_MOVEMENTS':
+      return { ...state, movements: action.payload };
     case 'ADD_PRODUCT':
       return {
         ...state,
@@ -155,17 +91,15 @@ function stockReducer(state: StockState, action: StockAction): StockState {
       };
     case 'ADD_MOVEMENT':
       const updatedProducts = state.products.map(product => {
-        if (product.id === action.payload.productId) {
-          const newStock = action.payload.type === 'IN' 
-            ? product.currentStock + action.payload.quantity
-            : action.payload.type === 'OUT'
-            ? Math.max(0, product.currentStock - action.payload.quantity)
-            : action.payload.quantity;
+        if (product.id === action.payload.product_id) {
+          const newStock = action.payload.type === 'in' 
+            ? product.current_stock + action.payload.quantity
+            : Math.max(0, product.current_stock - action.payload.quantity);
           
           return {
             ...product,
-            currentStock: newStock,
-            updatedAt: new Date().toISOString(),
+            current_stock: newStock,
+            updated_at: new Date().toISOString(),
           };
         }
         return product;
@@ -207,12 +141,16 @@ function stockReducer(state: StockState, action: StockAction): StockState {
 }
 
 interface StockContextValue extends StockState {
-  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateProduct: (product: Product) => void;
-  deleteProduct: (id: string) => void;
-  addStockMovement: (movement: Omit<StockMovement, 'id' | 'createdAt'>) => void;
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  addSupplier: (supplier: Omit<Supplier, 'id'>) => void;
+  addProduct: (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateProduct: (product: Product) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  addStockMovement: (movement: Omit<StockMovement, 'id' | 'created_at'>) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateCategory: (category: Category) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  addSupplier: (supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateSupplier: (supplier: Supplier) => Promise<void>;
+  deleteSupplier: (id: string) => Promise<void>;
   setFilter: (filter: StockFilter) => void;
   getFilteredProducts: () => Product[];
   getStockLevel: (product: Product) => 'high' | 'medium' | 'low' | 'out';
@@ -221,56 +159,147 @@ interface StockContextValue extends StockState {
 const StockContext = createContext<StockContextValue | undefined>(undefined);
 
 export function StockProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(stockReducer, {
-    ...initialState,
-    products: sampleProducts,
-  });
+  const [state, dispatch] = useReducer(stockReducer, initialState);
+
+  const fetchProducts = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) {
+      console.error('Error fetching products:', error);
+    } else {
+      dispatch({ type: 'SET_PRODUCTS', payload: data || [] });
+    }
+    dispatch({ type: 'SET_LOADING', payload: false });
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
+    const { data, error } = await supabase.from('categories').select('*');
+    if (error) {
+      console.error('Error fetching categories:', error);
+    } else {
+      dispatch({ type: 'SET_CATEGORIES', payload: data || [] });
+    }
+  }, []);
+
+  const fetchSuppliers = useCallback(async () => {
+    const { data, error } = await supabase.from('suppliers').select('*');
+    if (error) {
+      console.error('Error fetching suppliers:', error);
+    } else {
+      dispatch({ type: 'SET_SUPPLIERS', payload: data || [] });
+    }
+  }, []);
+
+  const fetchMovements = useCallback(async () => {
+    const { data, error } = await supabase.from('movements').select('*');
+    if (error) {
+      console.error('Error fetching movements:', error);
+    } else {
+      dispatch({ type: 'SET_MOVEMENTS', payload: data || [] });
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+    fetchSuppliers();
+    fetchMovements();
+  }, [fetchProducts, fetchCategories, fetchSuppliers, fetchMovements]);
 
   useEffect(() => {
     dispatch({ type: 'CALCULATE_STATS' });
   }, [state.products, state.movements]);
 
-  const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const product: Product = {
-      ...productData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    dispatch({ type: 'ADD_PRODUCT', payload: product });
+  const addProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase.from('products').insert([productData]).select();
+    if (error) {
+      console.error('Error adding product:', error);
+    } else if (data && data.length > 0) {
+      dispatch({ type: 'ADD_PRODUCT', payload: data[0] });
+    }
   };
 
-  const updateProduct = (product: Product) => {
-    dispatch({ type: 'UPDATE_PRODUCT', payload: { ...product, updatedAt: new Date().toISOString() } });
+  const updateProduct = async (product: Product) => {
+    const { data, error } = await supabase.from('products').update(product).eq('id', product.id).select();
+    if (error) {
+      console.error('Error updating product:', error);
+    } else if (data && data.length > 0) {
+      dispatch({ type: 'UPDATE_PRODUCT', payload: data[0] });
+    }
   };
 
-  const deleteProduct = (id: string) => {
-    dispatch({ type: 'DELETE_PRODUCT', payload: id });
+  const deleteProduct = async (id: string) => {
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting product:', error);
+    } else {
+      dispatch({ type: 'DELETE_PRODUCT', payload: id });
+    }
   };
 
-  const addStockMovement = (movementData: Omit<StockMovement, 'id' | 'createdAt'>) => {
-    const movement: StockMovement = {
-      ...movementData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-    };
-    dispatch({ type: 'ADD_MOVEMENT', payload: movement });
+  const addStockMovement = async (movementData: Omit<StockMovement, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('movements').insert([movementData]).select();
+    if (error) {
+      console.error('Error adding movement:', error);
+    } else if (data && data.length > 0) {
+      dispatch({ type: 'ADD_MOVEMENT', payload: data[0] });
+      // Re-fetch products to update stock levels, as triggers handle stock updates in DB
+      fetchProducts(); 
+    }
   };
 
-  const addCategory = (categoryData: Omit<Category, 'id'>) => {
-    const category: Category = {
-      ...categoryData,
-      id: Date.now().toString(),
-    };
-    dispatch({ type: 'ADD_CATEGORY', payload: category });
+  const addCategory = async (categoryData: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase.from('categories').insert([categoryData]).select();
+    if (error) {
+      console.error('Error adding category:', error);
+    } else if (data && data.length > 0) {
+      dispatch({ type: 'ADD_CATEGORY', payload: data[0] });
+    }
   };
 
-  const addSupplier = (supplierData: Omit<Supplier, 'id'>) => {
-    const supplier: Supplier = {
-      ...supplierData,
-      id: Date.now().toString(),
-    };
-    dispatch({ type: 'ADD_SUPPLIER', payload: supplier });
+  const updateCategory = async (category: Category) => {
+    const { data, error } = await supabase.from('categories').update(category).eq('id', category.id).select();
+    if (error) {
+      console.error('Error updating category:', error);
+    } else if (data && data.length > 0) {
+      dispatch({ type: 'SET_CATEGORIES', payload: state.categories.map(c => c.id === data[0].id ? data[0] : c) });
+    }
+  };
+
+  const deleteCategory = async (id: string) => {
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting category:', error);
+    } else {
+      dispatch({ type: 'SET_CATEGORIES', payload: state.categories.filter(c => c.id !== id) });
+    }
+  };
+
+  const addSupplier = async (supplierData: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase.from('suppliers').insert([supplierData]).select();
+    if (error) {
+      console.error('Error adding supplier:', error);
+    } else if (data && data.length > 0) {
+      dispatch({ type: 'ADD_SUPPLIER', payload: data[0] });
+    }
+  };
+
+  const updateSupplier = async (supplier: Supplier) => {
+    const { data, error } = await supabase.from('suppliers').update(supplier).eq('id', supplier.id).select();
+    if (error) {
+      console.error('Error updating supplier:', error);
+    } else if (data && data.length > 0) {
+      dispatch({ type: 'SET_SUPPLIERS', payload: state.suppliers.map(s => s.id === data[0].id ? data[0] : s) });
+    }
+  };
+
+  const deleteSupplier = async (id: string) => {
+    const { error } = await supabase.from('suppliers').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting supplier:', error);
+    } else {
+      dispatch({ type: 'SET_SUPPLIERS', payload: state.suppliers.filter(s => s.id !== id) });
+    }
   };
 
   const setFilter = (filter: StockFilter) => {
@@ -278,9 +307,9 @@ export function StockProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getStockLevel = (product: Product): 'high' | 'medium' | 'low' | 'out' => {
-    if (product.currentStock === 0) return 'out';
-    if (product.currentStock <= product.minStock) return 'low';
-    if (product.currentStock <= product.minStock * 2) return 'medium';
+    if (product.current_stock === 0) return 'out';
+    if (product.current_stock <= product.min_stock) return 'low';
+    if (product.current_stock <= product.min_stock * 2) return 'medium';
     return 'high';
   };
 
@@ -297,11 +326,11 @@ export function StockProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (state.filter.category) {
-      filtered = filtered.filter(product => product.category === state.filter.category);
+      filtered = filtered.filter(product => product.category_id === state.filter.category);
     }
 
     if (state.filter.supplier) {
-      filtered = filtered.filter(product => product.supplier === state.filter.supplier);
+      filtered = filtered.filter(product => product.supplier_id === state.filter.supplier);
     }
 
     if (state.filter.stockLevel) {
@@ -320,7 +349,11 @@ export function StockProvider({ children }: { children: React.ReactNode }) {
         deleteProduct,
         addStockMovement,
         addCategory,
+        updateCategory,
+        deleteCategory,
         addSupplier,
+        updateSupplier,
+        deleteSupplier,
         setFilter,
         getFilteredProducts,
         getStockLevel,
@@ -338,3 +371,4 @@ export function useStock() {
   }
   return context;
 }
+
